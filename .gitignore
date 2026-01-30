@@ -9,15 +9,15 @@ vagrant/.vagrant/
 *.py~
 *.swp
 *.py-e
-*.mz
-*.pt
+#*.mz
+#*.pt
 /history/
 */data/
 /tb_summary/
 # *.sh
 /mase_output/
 .devcontainer/
-*.ckpt
+#*.ckpt
 !/docs/tutorials/tensorrt/checkpoints/*.ckpt
 *.pkl
 /src/examples/**/cache/
