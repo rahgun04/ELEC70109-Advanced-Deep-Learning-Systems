@@ -55,11 +55,24 @@ without:
 
 ## Question 1
 
+In the original tutorial, all layers shared the same fixed-point configuration. I modified the search space to accept widths and fract_widths.
+
+```python
+search_space_task1 = {
+    "linear_layer_choices": [torch.nn.Linear, LinearInteger],
+    "widths": [8, 16, 32],
+    "frac_widths": [2, 4, 8]
+}
+
+```
+
 After allowing difrerent layers to have the extra widths, and exposing this as a parameter to optuna, we got the following graph - optuna was able to an excellent set after a few issues and more trials didn't increase the accuracy.
 
 ![](mdassets/l3t6q1.png)
 
-This brought the accuracy up to 87.7%
+This brought the accuracy up to 87.7%.
+
+This is due to early layers (feature extractors) and late layers (classification heads) having different sensitivities to quantization noise. Optuna also is efficient in searching, showing why we reached such a good configuration early.
 
 ## Question 2
 
@@ -67,6 +80,9 @@ I've extended this to run searches in different precisions - we can see that Blo
 
 ![](mdassets/l3t6q2.png)
 
-Accuracy for Log should be better (above integer) but due to a bug in my code only performs random guesses - unfortunately i don't have enough time to run it all again :(
-
-Again, more iterations didn't help
+BlockFP achieved the highest accuracy due to sharing an exponent across a block of numbers, meaning it can capture a wider dynamic range than standard Integer fixed-point while maintaining the hardware efficiency of fixed-point arithmetic.
+Minifloat is also very good due to the exponent bits allowing it to represent small numbers
+Binary is fast to converge but has a low accuracy ceiling.
+Integer performed badly due to low dynamic range.
+The accuracy for Log is zero due to the zero weight, but this could be made a paramter
+Again we can see that more iterations help, but after a certain point don't help due to having found a very good configuration
