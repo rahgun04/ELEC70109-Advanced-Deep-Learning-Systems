@@ -33,4 +33,18 @@ without:
 * Random pruneing: 0.839 -> 0.75
 * After training: 0.75 -> 0.83
 
-## Quantisation sweeps
+## Quantisation / pruning sweeps
+
+* did a sweep of quantization bit-widths:
+[quantisation sweep](mdassets/ptq_sweep.png)
+* we can see that after 8 bits, accuracy post training pretty much tapers off. Interstingly, huge ammounts of accuracy are lost when quanitsing to 5/7 bits, which can be re-gained almost entirely with some training.
+
+* next we did sweeps of various pruning sparsities using both l1-norm and random pruneing as well as post prune training. 
+[pruning sweep](mdassets/prune_sweep.png)
+* We can see that L1-pruning is far superior to randomm pruning. This makes sense as L1 pruning removes weight with small magnitured, meaning they likely don't have much impact on the output of the network regardless.
+* random pruning appears to be very destructive without post training
+* we can infer that roughly 70% of weights are not critical for high accuracy
+* interestingly l1-pruneing seems to perform similarly to random pruning and training implying that the lost weights' behaviour are re-learned. 
+* random pruning clearly removes some important paths that can't be re-learned.
+
+# LAB 2
