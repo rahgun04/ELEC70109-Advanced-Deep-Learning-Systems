@@ -48,3 +48,25 @@ without:
 * random pruning clearly removes some important paths that can't be re-learned.
 
 # LAB 2
+
+
+
+# LAB 3
+
+## Question 1
+
+After allowing difrerent layers to have the extra widths, and exposing this as a parameter to optuna, we got the following graph - optuna was able to an excellent set after a few issues and more trials didn't increase the accuracy.
+
+![](mdassets/l3t6q1.png)
+
+This brought the accuracy up to 87.7%
+
+## Question 2
+
+I've extended this to run searches in different precisions - we can see that BlockFP performs best, followed by Minifloat, Binary, and then Integer.
+
+![](mdassets/l3t6q2.png)
+
+Accuracy for Log should be better (above integer) but due to a bug in my code only performs random guesses - unfortunately i don't have enough time to run it all again :(
+
+Again, more iterations didn't help
