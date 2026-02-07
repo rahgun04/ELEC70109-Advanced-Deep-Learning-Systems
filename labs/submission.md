@@ -156,18 +156,18 @@ The fusion dose increase the speed a lot. And compare GPU to CPU, the speed incr
 
 ### Question 3
 
-#### Section a
+#### Question 1
 **Q:** How does MXINT8 benefit custom hardware if both the activation and weights in a linear layer are quantized to MXINT8?
 
 **A:** The MXINT8 is much hardware friendly, in two aspect. One is integer computation  is simple in hardware and the other is it redecu the data size and so dose reduce the data throughput for a given memory bendwidth. 
 - In hardware design aspect, the hardware the computation of FP number is much compicated and usually require multiple cycles to complete the computation which reduce the IPS. And large batch of FP computation will result in speed decreasing multiple times. How ever if we use MXINT to quantise FP numbers, the processing elements in tensor core or vector unit can usig integer MAC units which can finish computation in smaller cycles or even in one cycle other than multiple cycles in FP unit.
 - And in dataflow aspect, if the memory width is 32 bits, the effective memory bendwidth will be 4 times larger.
-#### Section b
+#### Question 2
 **Q:** What is the purpose of the variable dont_need_abs and bias in the C++ for loop?
 
 **A:** The FP in IEEE assume the mantissa has leading one, but MXINT does not guarantee. The dont_need_abs indicate if the leading one exits in mantissa. If it exit it is the same as FP IEEE, but if not, we need to removed the leading on introduced while using FP IEEE conversion.
 
-#### Section c
+#### Question 3
 **Q:** How does `cta_tiler` partition the data for copy?
 
 **A:** the cta_tiler is used to prepare different section of memory i.e. a tile for different Compute Thread Arrays. While call local_tile, we need to pass the shape for each tile and the cta_tiler is the shape (BLK_M, BLK_K). With it, cta_coor will also being passed to local_tile, this is to indicate the cta location, that is which thread will used the tile. The local_tile dose not copy the data, but only return a Tensor view, i.e. a pointer to the memory section.
@@ -175,7 +175,7 @@ The fusion dose increase the speed a lot. And compare GPU to CPU, the speed incr
 **Q:** How does layout_sX partition the threads in a threadblock for computation?
 **A:** layout_sX defines a 2D mapping from threadIdx.x to (m, k) coordinates inside the CTA tile, so that each thread in the block is assigned ownership of exactly one (m, k) element in the shared-memory tile.
 
-#### Section d
+#### Question 4
 **Q:** Why the saved GPU memory is not exactly (32 - (4+8/32))/32 = 86.7% of the FP32 model?
 **A:** 
 ```python
