@@ -42,20 +42,30 @@ Comparision:
 ## Quantisation / pruning sweeps
 
 * did a sweep of quantization bit-widths:
-[quantisation sweep](mdassets/ptq_sweep.png)
+![quantisation sweep](mdassets/ptq_sweep.png)
 * we can see that after 8 bits, accuracy post training pretty much tapers off. Interstingly, huge ammounts of accuracy are lost when quanitsing to 5/7 bits, which can be re-gained almost entirely with some training.
 
 * next we did sweeps of various pruning sparsities using both l1-norm and random pruneing as well as post prune training. 
-[pruning sweep](mdassets/prune_sweep.png)
+![pruning sweep](mdassets/prune_sweep.png)
 * We can see that L1-pruning is far superior to randomm pruning. This makes sense as L1 pruning removes weight with small magnitured, meaning they likely don't have much impact on the output of the network regardless.
 * random pruning appears to be very destructive without post training
 * we can infer that roughly 70% of weights are not critical for high accuracy
 * interestingly l1-pruneing seems to perform similarly to random pruning and training implying that the lost weights' behaviour are re-learned. 
 * random pruning clearly removes some important paths that can't be re-learned.
+* I thnk that what is considered the "best" pruning sparsity really depends on how mych you care about model size. 0.7 sparsity is certainly best for compression, but if the additional accuracy is important to you're use case, annything form 0.3 - 0.5 is reasonable. For the purposes of future labs, we will use 0.7.
 
 # LAB 2
 
 
+* first we tried tried 3 different samplers to see which is the most effective after a certain number of trials
+![hyperparameter optimizer comparison](mdassets/hyperparameter_optimization_comparison.png)
+* we found that grid shows some some socilating behaviour as it sweeps systematically through all configurations, regularly hitting both quite promising and quite poor confiogurations
+* random samplet produced random configurations that tend to have a relatively average performance
+* TPE seems to perform poorly at first, but as time progresses seems to start only trying effective configurations - implying that with more trials it would eventually converge on only very promising solutions.
+
+* Because performance of hyperparameters might be different after compression, we ran a TPE sampled hyperparameter search measuring performance after training, compression and post compression training. The objective function was based on post compression training.
+![quantization aware hyperparameter tuning](mdassets/compression_aware_hpp_search.png)
+>>>>>>> bca7542 (lab2)
 
 # LAB 3
 
@@ -191,3 +201,5 @@ The fusion dose increase the speed a lot. And compare GPU to CPU, the speed incr
         torch.cuda.empty_cache()
 ```
 From this section we know that we are only quantize the torch.nn.Linear layer. There are other layer that are not being quantized for example encoder, pooling and classifer.
+
+
