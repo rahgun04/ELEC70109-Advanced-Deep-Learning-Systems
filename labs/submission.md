@@ -7,7 +7,7 @@
 
 ## Tutorial 2:
 
-1) setup MG - selecting which inpuits of the forward pass function to use. 
+1) setup MG - selecting which inputs of the forward pass function to use. 
 2) the topology of the graph with attention mask + labels vs without:
 
 with:
@@ -19,10 +19,10 @@ Comparision:
   * labels: adds nodes to the bottom of the graph that takes the labels and finds the cross entropy loss
 ![](./mdassets/laba0_tutorial_2_task_1_compare_2.png)
   * attention mask: adds placeholder node to get attention mask (without it uses torch.ones), which is used to inform the attention layer.
-  * From the graph we know that 3 input is required for traning, but 1 input is batter for inference.
+  * From the graph we know that 3 input is required for training, but 1 input is batter for inference.
 
-3) then did full supervised finetuneing (on layers that aren't embedding related) acheiveing 0.81 accuracy
-4) finally did PEFT achierveing 0.83 accuracy
+3) then did full supervised finetuneing (on layers that aren't embedding related) achieving 0.81 accuracy
+4) finally did PEFT achieving 0.83 accuracy
 
 
 
@@ -43,24 +43,24 @@ Comparision:
 
 * did a sweep of quantization bit-widths:
 ![quantisation sweep](mdassets/ptq_sweep.png)
-* we can see that after 8 bits, accuracy post training pretty much tapers off. Interstingly, huge ammounts of accuracy are lost when quanitsing to 5/7 bits, which can be re-gained almost entirely with some training.
+* we can see that after 8 bits, accuracy post training pretty much tapers off. Interestingly, huge amounts of accuracy are lost when quantising to 5/7 bits, which can be re-gained almost entirely with some training.
 
-* next we did sweeps of various pruning sparsities using both l1-norm and random pruneing as well as post prune training. 
+* next we did sweeps of various pruning sparsities using both l1-norm and random pruning as well as post prune training. 
 ![pruning sweep](mdassets/prune_sweep.png)
-* We can see that L1-pruning is far superior to randomm pruning. This makes sense as L1 pruning removes weight with small magnitured, meaning they likely don't have much impact on the output of the network regardless.
+* We can see that L1-pruning is far superior to random pruning. This makes sense as L1 pruning removes weight with small magnitude, meaning they likely don't have much impact on the output of the network regardless.
 * random pruning appears to be very destructive without post training
 * we can infer that roughly 70% of weights are not critical for high accuracy
-* interestingly l1-pruneing seems to perform similarly to random pruning and training implying that the lost weights' behaviour are re-learned. 
+* interestingly l1-pruning seems to perform similarly to random pruning and training implying that the lost weights' behaviour are re-learned. 
 * random pruning clearly removes some important paths that can't be re-learned.
-* I thnk that what is considered the "best" pruning sparsity really depends on how mych you care about model size. 0.7 sparsity is certainly best for compression, but if the additional accuracy is important to you're use case, annything form 0.3 - 0.5 is reasonable. For the purposes of future labs, we will use 0.7.
+* I think that what is considered the "best" pruning sparsity really depends on how much you care about model size. 0.7 sparsity is certainly best for compression, but if the additional accuracy is important to you're use case, anything form 0.3 - 0.5 is reasonable. For the purposes of future labs, we will use 0.7.
 
 # LAB 2
 
 
 * first we tried tried 3 different samplers to see which is the most effective after a certain number of trials
 ![hyperparameter optimizer comparison](mdassets/hyperparameter_optimization_comparison.png)
-* we found that grid shows some some socilating behaviour as it sweeps systematically through all configurations, regularly hitting both quite promising and quite poor confiogurations
-* random samplet produced random configurations that tend to have a relatively average performance
+* we found that grid shows some some oscillating behaviour as it sweeps systematically through all configurations, regularly hitting both quite promising and quite poor configurations
+* random sample produced random configurations that tend to have a relatively average performance
 * TPE seems to perform poorly at first, but as time progresses seems to start only trying effective configurations - implying that with more trials it would eventually converge on only very promising solutions.
 
 * Because performance of hyperparameters might be different after compression, we ran a TPE sampled hyperparameter search measuring performance after training, compression and post compression training. The objective function was based on post compression training.
@@ -82,7 +82,7 @@ search_space_task1 = {
 
 ```
 
-After allowing difrerent layers to have the extra widths, and exposing this as a parameter to optuna, we got the following graph - optuna was able to an excellent set after a few issues and more trials didn't increase the accuracy.
+After allowing different layers to have the extra widths, and exposing this as a parameter to optuna, we got the following graph - optuna was able to an excellent set after a few issues and more trials didn't increase the accuracy.
 
 ![](mdassets/l3t6q1.png)
 
@@ -100,7 +100,7 @@ BlockFP achieved the highest accuracy due to sharing an exponent across a block 
 Minifloat is also very good due to the exponent bits allowing it to represent small numbers
 Binary is fast to converge but has a low accuracy ceiling.
 Integer performed badly due to low dynamic range.
-The accuracy for Log is zero due to the zero weight, but this could be made a paramter
+The accuracy for Log is zero due to the zero weight, but this could be made a parameter
 Again we can see that more iterations help, but after a certain point don't help due to having found a very good configuration
 
 We also did a test for all 11 types with larger trails with highest accuracy `0.87564`.
@@ -122,7 +122,7 @@ much slower! The possible reasons:
 
 2) My cpu is Intel i7-12700KF, which has multi cpus. Different execution paths may use different threading strategies. TorchInductor and eager mode can interact differently with OpenMP or oneDNN thread pools, sometimes leading to oversubscription or inefficient core utilization, which can degrade performance.
 
-3) torch.compile is jit compilation. This intruduced compilation overhead for each bytecode executaion.
+3) torch.compile is jit compilation. This introduced compilation overhead for each bytecode execution.
 
 #### case: GPU
 
@@ -131,12 +131,12 @@ GPU Original model: `0.0411 s`
 GPU Optimized model: `0.3081 s`
 
 even much more slower! The possible reasons:
-1) During compiling trail, I got some warning as output, this may be due to some overhead happed when the compile run the model.forward in first time, for example. looking for correct liberary and the low level apis (pynvml). And also during the backend searching or loading, the compile decide to used some bad backends.
+1) During compiling trail, I got some warning as output, this may be due to some overhead happed when the compile run the model.forward in first time, for example. looking for correct library and the low level apis (pynvml). And also during the backend searching or loading, the compile decide to used some bad backends.
 
 2) Maybe there are other threads are using the GPU and the GPU is too busy to run the trail.
 
 #### case: after warmup
-After the two initila trail, I ran it again in notebook, the result is much better.
+After the two initial trail, I ran it again in notebook, the result is much better.
 
 CPU Original model: `0.9321 s`
 
@@ -147,11 +147,11 @@ GPU Original model: `0.0214 s`
 GPU Optimized model: `0.0213 s`
 
 
-1) The possible case is that the model is being cache inside the device and the comiled path is also cached, no more jit graph break and recompiling happend in the runtime.
+1) The possible case is that the model is being cache inside the device and the compiled path is also cached, no more jit graph break and recompiling happened in the runtime.
 
 ### Question 2
 
-- a: rewrite the time_modle function and get_data function. And usd the same qkv for both cpu and gpu. Load to correct device before get_data call.
+- a: rewrite the time_model function and get_data function. And usd the same qkv for both cpu and gpu. Load to correct device before get_data call.
 - b: The result is as follow:
 
 CPU Original attention: `0.147642 s`
@@ -162,20 +162,42 @@ GPU Original attention: `0.000087 s`
 
 GPU Fused attention: `0.000031 s`
 
-The fusion dose increase the speed a lot. And compare GPU to CPU, the speed increases is limited but still double the speed. This may be the memory bendwidth on GPU is much larger than CPU and the speed up infered that the original attention is indeed limited by the memory bottelneck.
+The fusion dose increase the speed a lot. And compare GPU to CPU, the speed increases is limited but still double the speed. This may be the memory bandwidth on GPU is much larger than CPU and the speed up inferred that the original attention is indeed limited by the memory bottleneck.
 
 ### Question 3
 
 #### Question 1
 **Q:** How does MXINT8 benefit custom hardware if both the activation and weights in a linear layer are quantized to MXINT8?
 
-**A:** The MXINT8 is much hardware friendly, in two aspect. One is integer computation  is simple in hardware and the other is it redecu the data size and so dose reduce the data throughput for a given memory bendwidth. 
-- In hardware design aspect, the hardware the computation of FP number is much compicated and usually require multiple cycles to complete the computation which reduce the IPS. And large batch of FP computation will result in speed decreasing multiple times. How ever if we use MXINT to quantise FP numbers, the processing elements in tensor core or vector unit can usig integer MAC units which can finish computation in smaller cycles or even in one cycle other than multiple cycles in FP unit.
-- And in dataflow aspect, if the memory width is 32 bits, the effective memory bendwidth will be 4 times larger.
-#### Question 2
-**Q:** What is the purpose of the variable dont_need_abs and bias in the C++ for loop?
+**A:** The MXINT8 is much hardware friendly, in two aspect. One is integer computation  is simple in hardware and the other is it reduce the data size and so dose reduce the data throughput for a given memory bandwidth. 
+- In hardware design aspect, the hardware the computation of FP number is much complicated and usually require multiple cycles to complete the computation which reduce the IPS. And large batch of FP computation will result in speed decreasing multiple times. How ever if we use MXINT to quantise FP numbers, the processing elements in tensor core or vector unit can using integer MAC units which can finish computation in smaller cycles or even in one cycle other than multiple cycles in FP unit.
+- And in dataflow aspect, if the memory width is 32 bits, the effective memory bandwidth will be 4 times larger.
+## b) Dequantise kernel 
+There are a series of steps to convert a quantised MXINT8 to bfloat16.
+MXINT8 and bfloat16 have different interpretations of how the mantissa is laid out.
 
-**A:** The FP in IEEE assume the mantissa has leading one, but MXINT does not guarantee. The dont_need_abs indicate if the leading one exits in mantissa. If it exit it is the same as FP IEEE, but if not, we need to removed the leading on introduced while using FP IEEE conversion.
+The bfloat16 mantissa section only encodes the value after the decimal point and the $2^0$ position is always treated as 1.
+
+MXINT8 does not and cannot do this as the exponent is shared between multiple numbers and the only way to encode a discrepancy in exponent is have the mantissa denormalised.
+
+### Question 2
+The dequantisation converts form a number where normalisation isn't enforced to one where it is. 
+```c
+auto bias = cutlass::bfloat16_t::bitcast(sign | exp | uint16_t(0));
+auto frac = static_cast<uint16_t>((mantissa_abs & 0x3F) << 1);
+auto out = cutlass::bfloat16_t::bitcast(sign | exp | frac);
+```
+The `0x3F` mask takes the 6 LSBs of the 7 bit MXINT8 mantissa and creates a bfloat16 through a bitcast. This has implicitly assumed that the $2^0$ position is 1.
+
+```c
+auto dont_need_bias = bool(mantissa_abs & 0x40);
+tXrY[i] = dont_need_bias ? out : out - bias;
+```
+Which is why the case is tested for and the bias is applied if the $2^0$ position was 0.
+
+$bias = (-1)^{sign} \times 2^{exponent} \times (1 + mantissa/2^7)$
+
+The bitrange of the bias mantissa is set to 0' but the resulting number represents 1.0 scaled by the exponent.
 
 #### Question 3
 **Q:** How does `cta_tiler` partition the data for copy?
@@ -184,6 +206,10 @@ The fusion dose increase the speed a lot. And compare GPU to CPU, the speed incr
 
 **Q:** How does layout_sX partition the threads in a threadblock for computation?
 **A:** layout_sX defines a 2D mapping from threadIdx.x to (m, k) coordinates inside the CTA tile, so that each thread in the block is assigned ownership of exactly one (m, k) element in the shared-memory tile.
+
+#### Predication
+Predication is an important part of the kernel is used as a means to keep the kernel the exact same across threads but allow it to work on non standard sized input tensors.
+DimBlock may not perfectly divide the input task (Dimensions group_size $\times$ num_groups). So the grid is launched such that the number of blocks launched tile to be larger than the input. Predication is applied on the Gmem, Smem transfers using `copy_if(predication_map, src, dst)`.  
 
 #### Question 4
 **Q:** Why the saved GPU memory is not exactly (32 - (4+8/32))/32 = 86.7% of the FP32 model?

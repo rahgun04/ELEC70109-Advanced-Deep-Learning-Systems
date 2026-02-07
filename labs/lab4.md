@@ -89,7 +89,7 @@ The bitrange of the bias mantissa is set to 0' but the resulting number represen
 The handwritten CUDA kernel to run the dequantise operation splits the workload into blocks and manually manages the Gmem to Smem transfers. Predication is used as a means to keep the kernel the exact same across threads but allow it to work on non standard sized input tensors.
 
 ### Threadblock (layout_sX) 
-Whilst `layout_sX` isn't directly used to launch the grid of threadblocks, it shares dimensions with `dimBlock` which is used when launching the kernel.
+Whilst `layout_sX` isn't directly used to launch the grid of threadblocks, it shares dimensions with `dimBlock` which is used when launching the kernel. Each thread computes one (m, k) coordinate and handles that part of the tile.  
 ```c
 dequantize1d_device<<<dimGrid, dimBlock, 0, stream>>> ...
 ```
