@@ -65,7 +65,6 @@ Comparision:
 
 * Because performance of hyperparameters might be different after compression, we ran a TPE sampled hyperparameter search measuring performance after training, compression and post compression training. The objective function was based on post compression training.
 ![quantization aware hyperparameter tuning](mdassets/compression_aware_hpp_search.png)
->>>>>>> bca7542 (lab2)
 
 # LAB 3
 
