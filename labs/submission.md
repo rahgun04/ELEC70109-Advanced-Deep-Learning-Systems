@@ -7,31 +7,37 @@
 
 ## Tutorial 2:
 
-* setup MG - selecting which inpuits of the forward pass function to use. 
-* the topology of the graph with attention mask + labels vs without:
+1) setup MG - selecting which inpuits of the forward pass function to use. 
+2) the topology of the graph with attention mask + labels vs without:
 
 with:
-![idk](mdassets/mg.bert-all-labels.svg)
+[link to all labels graph](mdassets/mg.bert-all-labels.svg)
 without:
-![idk](mdassets/mg.bert-no-attention_mask-no-labels.svg)
+[link to no labels graph](mdassets/mg.bert-no-attention_mask-no-labels.svg)
+Comparision:
+![](./mdassets/laba0_tutorial_2_task_1_compare_1.png)
+  * labels: adds nodes to the bottom of the graph that takes the labels and finds the cross entropy loss
+![](./mdassets/laba0_tutorial_2_task_1_compare_2.png)
+  * attention mask: adds placeholder node to get attention mask (without it uses torch.ones), which is used to inform the attention layer.
+  * From the graph we know that 3 input is required for traning, but 1 input is batter for inference.
 
-    * labels: adds nodes to the bottom of the graph that takes the labels and finds the cross entropy loss
-    * attention mask: adds placeholder node to get attention mask (without it uses torch.ones), which is used to inform the attention layer.
+3) then did full supervised finetuneing (on layers that aren't embedding related) acheiveing 0.81 accuracy
+4) finally did PEFT achierveing 0.83 accuracy
 
-* then did full supervised finetuneing (on layers that aren't embedding related) acheiveing 0.81 accuracy
-* finally did PEFT achierveing 0.83 accuracy
+
+
 
 # LAB 1
 
 ## Tutorial 3:
 
-* quantization pass: accuracy went 0.83 -> 0.815
-* PQT: accuracy 0.815 ->0.839
+* quantization pass: accuracy went `0.83` -> `0.815`
+* PQT: accuracy `0.815` -> `0.839`
 
 ## Tutorial 4:
 
-* Random pruneing: 0.839 -> 0.75
-* After training: 0.75 -> 0.83
+* Random pruneing: `0.839` -> `0.75`
+* After training: `0.75` -> `0.83`
 
 ## Quantisation / pruning sweeps
 
@@ -76,7 +82,7 @@ This is due to early layers (feature extractors) and late layers (classification
 
 ## Question 2
 
-I've extended this to run searches in different precisions - we can see that BlockFP performs best, followed by Minifloat, Binary, and then Integer.
+We've extended this to run searches in different precisions - we can see that BlockFP performs best, followed by Minifloat, Binary, and then Integer.
 
 ![](mdassets/l3t6q2.png)
 
@@ -86,3 +92,102 @@ Binary is fast to converge but has a low accuracy ceiling.
 Integer performed badly due to low dynamic range.
 The accuracy for Log is zero due to the zero weight, but this could be made a paramter
 Again we can see that more iterations help, but after a certain point don't help due to having found a very good configuration
+
+We also did a test for all 11 types with larger trails with highest accuracy `0.87564`.
+![Link to graph with 11 tpyes and 10 trails](./mdassets/lab3_task2.png)
+[Link to best model's architecture](./lab3/best_mixed_precision_model_architecture.txt)
+## Lab 4
+
+### Question 1:
+
+#### case: CPU
+
+Original model: `0.9344 s`
+
+Optimized model: `2.5768 s`
+
+much slower! The possible reasons:
+
+1) ResNet-18 is dominated by convolution layers, which are already highly optimized in PyTorch eager mode using oneDNN on CPU. TorchInductor primarily benefits models with heavy pointwise operations or fusion opportunities. For convolution-heavy models, the generated code often cannot outperform optimized vendor libraries.
+
+2) My cpu is Intel i7-12700KF, which has multi cpus. Different execution paths may use different threading strategies. TorchInductor and eager mode can interact differently with OpenMP or oneDNN thread pools, sometimes leading to oversubscription or inefficient core utilization, which can degrade performance.
+
+3) torch.compile is jit compilation. This intruduced compilation overhead for each bytecode executaion.
+
+#### case: GPU
+
+GPU Original model: `0.0411 s`
+
+GPU Optimized model: `0.3081 s`
+
+even much more slower! The possible reasons:
+1) During compiling trail, I got some warning as output, this may be due to some overhead happed when the compile run the model.forward in first time, for example. looking for correct liberary and the low level apis (pynvml). And also during the backend searching or loading, the compile decide to used some bad backends.
+
+2) Maybe there are other threads are using the GPU and the GPU is too busy to run the trail.
+
+#### case: after warmup
+After the two initila trail, I ran it again in notebook, the result is much better.
+
+CPU Original model: `0.9321 s`
+
+CPU Optimized model: `0.7850 s`
+
+GPU Original model: `0.0214 s`
+
+GPU Optimized model: `0.0213 s`
+
+
+1) The possible case is that the model is being cache inside the device and the comiled path is also cached, no more jit graph break and recompiling happend in the runtime.
+
+### Question 2
+
+- a: rewrite the time_modle function and get_data function. And usd the same qkv for both cpu and gpu. Load to correct device before get_data call.
+- b: The result is as follow:
+
+CPU Original attention: `0.147642 s`
+
+CPU Fused attention: `0.002589 s`
+
+GPU Original attention: `0.000087 s`
+
+GPU Fused attention: `0.000031 s`
+
+The fusion dose increase the speed a lot. And compare GPU to CPU, the speed increases is limited but still double the speed. This may be the memory bendwidth on GPU is much larger than CPU and the speed up infered that the original attention is indeed limited by the memory bottelneck.
+
+### Question 3
+
+#### Section a
+**Q:** How does MXINT8 benefit custom hardware if both the activation and weights in a linear layer are quantized to MXINT8?
+
+**A:** The MXINT8 is much hardware friendly, in two aspect. One is integer computation  is simple in hardware and the other is it redecu the data size and so dose reduce the data throughput for a given memory bendwidth. 
+- In hardware design aspect, the hardware the computation of FP number is much compicated and usually require multiple cycles to complete the computation which reduce the IPS. And large batch of FP computation will result in speed decreasing multiple times. How ever if we use MXINT to quantise FP numbers, the processing elements in tensor core or vector unit can usig integer MAC units which can finish computation in smaller cycles or even in one cycle other than multiple cycles in FP unit.
+- And in dataflow aspect, if the memory width is 32 bits, the effective memory bendwidth will be 4 times larger.
+#### Section b
+**Q:** What is the purpose of the variable dont_need_abs and bias in the C++ for loop?
+
+**A:** The FP in IEEE assume the mantissa has leading one, but MXINT does not guarantee. The dont_need_abs indicate if the leading one exits in mantissa. If it exit it is the same as FP IEEE, but if not, we need to removed the leading on introduced while using FP IEEE conversion.
+
+#### Section c
+**Q:** How does `cta_tiler` partition the data for copy?
+
+**A:** the cta_tiler is used to prepare different section of memory i.e. a tile for different Compute Thread Arrays. While call local_tile, we need to pass the shape for each tile and the cta_tiler is the shape (BLK_M, BLK_K). With it, cta_coor will also being passed to local_tile, this is to indicate the cta location, that is which thread will used the tile. The local_tile dose not copy the data, but only return a Tensor view, i.e. a pointer to the memory section.
+
+**Q:** How does layout_sX partition the threads in a threadblock for computation?
+**A:** layout_sX defines a 2D mapping from threadIdx.x to (m, k) coordinates inside the CTA tile, so that each thread in the block is assigned ownership of exactly one (m, k) element in the shared-memory tile.
+
+#### Section d
+**Q:** Why the saved GPU memory is not exactly (32 - (4+8/32))/32 = 86.7% of the FP32 model?
+**A:** 
+```python
+    for layer_name, layer in model.named_modules():
+        if not isinstance(layer, torch.nn.Linear):
+            continue
+        if "classifier" in layer_name:
+            continue
+        layer.cuda()
+        layer_q = QLinearPacked.build_from_linear(layer, group_size=mxint8_group_size)
+        set_layer_by_name(model, layer_name, layer_q)
+        del layer
+        torch.cuda.empty_cache()
+```
+From this section we know that we are only quantize the torch.nn.Linear layer. There are other layer that are not being quantized for example encoder, pooling and classifer.
